@@ -1,0 +1,6 @@
+{
+  "name": "LIQUID AI",
+  "description": "Plataforma personal de inteligencia artificial con interfaz Liquid Glass óptica, bots personalizados y memoria aislada por conversación.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": []
+}

@@ -1,0 +1,397 @@
+@import "tailwindcss";
+@import "katex/dist/katex.min.css";
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --lg-refraction: 18;
+  --lg-blur: 22px;
+  --lg-chromatic: 1.5px;
+  --lg-specular: 0.48;
+  --lg-transparency: 0.56;
+  --lg-border-glow: 0.42;
+  --lg-depth: 1;
+  --lg-shadow: 0.24;
+  --lg-anim-speed: 1;
+  --lg-lighting: 0.65;
+  --lg-accent: #0284c7;
+  --lg-accent-soft: rgba(2, 132, 199, 0.14);
+  --lg-font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --lg-font-size: 15px;
+  --lg-density-gap: 1rem;
+  --lg-surface-rgb: 255, 255, 255;
+  --lg-surface-elevated-rgb: 248, 250, 252;
+  --lg-ink-rgb: 15, 23, 42;
+  --lg-border-rgb: 255, 255, 255;
+  --lg-edge-dark-rgb: 15, 23, 42;
+}
+
+.dark {
+  --lg-surface-rgb: 16, 23, 38;
+  --lg-surface-elevated-rgb: 22, 32, 52;
+  --lg-ink-rgb: 241, 245, 249;
+  --lg-border-rgb: 226, 232, 240;
+  --lg-edge-dark-rgb: 0, 0, 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  font-family: var(--lg-font-family);
+  font-size: var(--lg-font-size);
+  overflow-x: hidden;
+}
+
+/* ============================================================
+   LIQUID GLASS OPTICAL MATERIAL SYSTEM
+   Combines multi-layer specular gradients, optical depth bevels,
+   chromatic edge dispersion, backdrop-filter, and SVG feDisplacementMap
+   ============================================================ */
+
+.liquid-glass {
+  position: relative;
+  background: linear-gradient(
+    145deg,
+    rgba(var(--lg-surface-rgb), calc(var(--lg-transparency) + 0.14)) 0%,
+    rgba(var(--lg-surface-rgb), var(--lg-transparency)) 55%,
+    rgba(var(--lg-surface-elevated-rgb), calc(var(--lg-transparency) + 0.08)) 100%
+  );
+  backdrop-filter: blur(var(--lg-blur)) saturate(145%) contrast(104%);
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(145%) contrast(104%);
+  border: 1px solid rgba(var(--lg-border-rgb), calc(0.18 + var(--lg-border-glow) * 0.42));
+  box-shadow:
+    /* Ambient depth shadow */
+    0 calc(12px * var(--lg-depth)) calc(34px * var(--lg-depth)) calc(-6px * var(--lg-depth))
+      rgba(var(--lg-edge-dark-rgb), calc(var(--lg-shadow) * 0.65)),
+    /* Chromatic edge dispersion */
+    calc(var(--lg-chromatic) * -0.8) 0 0 0 rgba(56, 189, 248, calc(var(--lg-border-glow) * 0.16)),
+    calc(var(--lg-chromatic) * 0.8) 0 0 0 rgba(167, 139, 250, calc(var(--lg-border-glow) * 0.14)),
+    /* Top specular rim */
+    inset 0 1px 0 0 rgba(255, 255, 255, calc(var(--lg-specular) * 0.85)),
+    /* Bottom internal thickness bevel */
+    inset 0 calc(-1px * var(--lg-depth)) calc(8px * var(--lg-depth)) 0
+      rgba(var(--lg-edge-dark-rgb), calc(var(--lg-depth) * 0.08)),
+    /* Inner rim luminous glow */
+    inset 0 0 calc(20px * var(--lg-depth)) 0
+      rgba(255, 255, 255, calc(var(--lg-specular) * 0.18));
+  transition:
+    transform calc(220ms / max(0.25, var(--lg-anim-speed))) cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow calc(240ms / max(0.25, var(--lg-anim-speed))) cubic-bezier(0.16, 1, 0.3, 1),
+    border-color calc(200ms / max(0.25, var(--lg-anim-speed))) ease,
+    background-color calc(200ms / max(0.25, var(--lg-anim-speed))) ease;
+}
+
+.liquid-glass-refract {
+  /* Layer a subtle optical refraction pseudo-backdrop when SVG displacement is active */
+  isolation: isolate;
+}
+
+.liquid-glass-refract::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(
+    120% 80% at 18% 8%,
+    rgba(255, 255, 255, calc(var(--lg-specular) * 0.34)) 0%,
+    rgba(255, 255, 255, calc(var(--lg-specular) * 0.06)) 45%,
+    transparent 75%
+  );
+  mix-blend-mode: overlay;
+}
+
+.liquid-glass-refract::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, calc(var(--lg-border-glow) * 0.9)) 0%,
+    rgba(125, 211, 252, calc(var(--lg-chromatic) * 0.18)) 28%,
+    rgba(255, 255, 255, 0.05) 55%,
+    rgba(196, 181, 253, calc(var(--lg-chromatic) * 0.16)) 82%,
+    rgba(255, 255, 255, calc(var(--lg-border-glow) * 0.65)) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+.liquid-glass-refract > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Refractive backdrop lens layer inside select optical panels & buttons */
+.liquid-lens-layer {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+  backdrop-filter: url(#liquid-refract-panel) blur(calc(var(--lg-blur) * 0.45));
+  -webkit-backdrop-filter: blur(calc(var(--lg-blur) * 0.45));
+  opacity: 0.9;
+}
+
+.liquid-glass-button {
+  position: relative;
+  isolation: isolate;
+  background: linear-gradient(
+    160deg,
+    rgba(var(--lg-surface-rgb), calc(var(--lg-transparency) + 0.22)) 0%,
+    rgba(var(--lg-surface-rgb), calc(var(--lg-transparency) + 0.04)) 100%
+  );
+  backdrop-filter: blur(calc(var(--lg-blur) * 0.7)) saturate(140%);
+  -webkit-backdrop-filter: blur(calc(var(--lg-blur) * 0.7)) saturate(140%);
+  border: 1px solid rgba(var(--lg-border-rgb), calc(0.24 + var(--lg-border-glow) * 0.45));
+  box-shadow:
+    0 calc(4px * var(--lg-depth)) calc(14px * var(--lg-depth)) rgba(var(--lg-edge-dark-rgb), calc(var(--lg-shadow) * 0.45)),
+    calc(var(--lg-chromatic) * -0.45) 0 0 0 rgba(56, 189, 248, calc(var(--lg-border-glow) * 0.14)),
+    calc(var(--lg-chromatic) * 0.45) 0 0 0 rgba(167, 139, 250, calc(var(--lg-border-glow) * 0.12)),
+    inset 0 1px 0 0 rgba(255, 255, 255, calc(var(--lg-specular) * 0.92)),
+    inset 0 -1px 2px 0 rgba(var(--lg-edge-dark-rgb), calc(var(--lg-depth) * 0.1));
+  transition:
+    transform calc(180ms / max(0.25, var(--lg-anim-speed))) cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow calc(180ms / max(0.25, var(--lg-anim-speed))) cubic-bezier(0.16, 1, 0.3, 1),
+    background-color calc(160ms / max(0.25, var(--lg-anim-speed))) ease;
+}
+
+.liquid-glass-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow:
+    0 calc(8px * var(--lg-depth)) calc(20px * var(--lg-depth)) rgba(var(--lg-edge-dark-rgb), calc(var(--lg-shadow) * 0.58)),
+    calc(var(--lg-chromatic) * -0.6) 0 0 0 rgba(56, 189, 248, calc(var(--lg-border-glow) * 0.22)),
+    calc(var(--lg-chromatic) * 0.6) 0 0 0 rgba(167, 139, 250, calc(var(--lg-border-glow) * 0.2)),
+    inset 0 1px 0 0 rgba(255, 255, 255, calc(min(1, var(--lg-specular) * 1.1)));
+}
+
+.liquid-glass-button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.liquid-glass-button-accent {
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--lg-accent) 88%, white 18%) 0%,
+    var(--lg-accent) 60%,
+    color-mix(in srgb, var(--lg-accent) 85%, black 18%) 100%
+  );
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, calc(0.28 + var(--lg-border-glow) * 0.35));
+  box-shadow:
+    0 calc(6px * var(--lg-depth)) calc(18px * var(--lg-depth)) color-mix(in srgb, var(--lg-accent) 32%, transparent),
+    inset 0 1px 0 0 rgba(255, 255, 255, calc(0.35 + var(--lg-specular) * 0.5)),
+    inset 0 -1px 2px 0 rgba(0, 0, 0, 0.22);
+}
+
+/* Reduced Effects / Performance Fallback */
+.reduced-effects .liquid-glass,
+.reduced-effects .liquid-glass-button {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+}
+
+.reduced-effects .liquid-lens-layer,
+.reduced-effects .liquid-glass-refract::after {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Custom Range Slider Styling */
+input[type="range"].liquid-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 9999px;
+  background: rgba(var(--lg-ink-rgb), 0.14);
+  outline: none;
+}
+
+input[type="range"].liquid-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: #ffffff;
+  border: 2px solid var(--lg-accent);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22), inset 0 1px 1px rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+}
+
+input[type="range"].liquid-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: #ffffff;
+  border: 2px solid var(--lg-accent);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
+  cursor: pointer;
+}
+
+/* Markdown & Code Prose */
+.liquid-prose {
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+
+.liquid-prose p + p {
+  margin-top: 0.75rem;
+}
+
+.liquid-prose ul {
+  list-style-type: disc;
+  padding-left: 1.35rem;
+  margin: 0.6rem 0;
+}
+
+.liquid-prose ol {
+  list-style-type: decimal;
+  padding-left: 1.35rem;
+  margin: 0.6rem 0;
+}
+
+.liquid-prose li + li {
+  margin-top: 0.25rem;
+}
+
+.liquid-prose h1,
+.liquid-prose h2,
+.liquid-prose h3,
+.liquid-prose h4 {
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.45rem;
+  line-height: 1.3;
+}
+
+.liquid-prose h1 { font-size: 1.3em; }
+.liquid-prose h2 { font-size: 1.18em; }
+.liquid-prose h3 { font-size: 1.06em; }
+
+.liquid-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75rem 0;
+  font-size: 0.9em;
+  display: block;
+  overflow-x: auto;
+}
+
+.liquid-prose th,
+.liquid-prose td {
+  border: 1px solid rgba(var(--lg-ink-rgb), 0.14);
+  padding: 0.45rem 0.7rem;
+  text-align: left;
+}
+
+.liquid-prose th {
+  background: rgba(var(--lg-ink-rgb), 0.06);
+  font-weight: 600;
+}
+
+.liquid-prose blockquote {
+  border: 1px solid rgba(var(--lg-ink-rgb), 0.14);
+  border-radius: 0.75rem;
+  padding: 0.6rem 0.9rem;
+  margin: 0.7rem 0;
+  background: rgba(var(--lg-ink-rgb), 0.04);
+}
+
+.liquid-prose code:not(pre code) {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.87em;
+  padding: 0.14rem 0.38rem;
+  border-radius: 0.375rem;
+  background: rgba(var(--lg-ink-rgb), 0.09);
+}
+
+/* Highlight.js minimal adaptive palette */
+.hljs {
+  color: #1e293b;
+}
+.dark .hljs {
+  color: #e2e8f0;
+}
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-subst {
+  color: #0284c7;
+  font-weight: 500;
+}
+.dark .hljs-keyword,
+.dark .hljs-selector-tag {
+  color: #38bdf8;
+}
+.hljs-string,
+.hljs-doctag,
+.hljs-addition {
+  color: #059669;
+}
+.dark .hljs-string,
+.dark .hljs-doctag {
+  color: #34d399;
+}
+.hljs-number,
+.hljs-literal,
+.hljs-variable,
+.hljs-template-variable {
+  color: #d97706;
+}
+.dark .hljs-number,
+.dark .hljs-literal {
+  color: #fbbf24;
+}
+.hljs-comment,
+.hljs-quote {
+  color: #64748b;
+  font-style: italic;
+}
+.dark .hljs-comment {
+  color: #94a3b8;
+}
+.hljs-title,
+.hljs-section,
+.hljs-function {
+  color: #2563eb;
+}
+.dark .hljs-title,
+.dark .hljs-function {
+  color: #60a5fa;
+}
+
+/* Thin subtle scrollbars */
+.liquid-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.liquid-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.liquid-scroll::-webkit-scrollbar-thumb {
+  background: rgba(var(--lg-ink-rgb), 0.16);
+  border-radius: 9999px;
+}
+.liquid-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--lg-ink-rgb), 0.28);
+}
